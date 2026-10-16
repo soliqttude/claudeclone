@@ -1,7 +1,12 @@
 import * as bip39 from 'bip39'
-import * as bip32 from 'bip32'
+import { BIP32Factory } from 'bip32'
 import { ethers } from 'ethers'
 import * as bitcoin from 'bitcoinjs-lib'
+import { ECPairFactory } from 'ecpair'
+import * as ecc from 'tiny-secp256k1'
+
+const bip32 = BIP32Factory(ecc)
+const ECPair = ECPairFactory(ecc)
 
 export interface DerivedKey {
   privateKey: string
@@ -41,7 +46,7 @@ export function deriveEthereumKey(seed: Buffer): DerivedKey {
   
   return {
     privateKey,
-    publicKey: wallet.publicKey,
+    publicKey: wallet.signingKey.publicKey,
     address: wallet.address,
     path
   }
@@ -55,7 +60,9 @@ export function deriveBitcoinKey(seed: Buffer): DerivedKey {
   if (!derived.privateKey) throw new Error('Failed to derive BTC key')
   
   const privateKey = derived.privateKey.toString('hex')
-  const keyPair = bitcoin.ECPair.fromPrivateKeyBuffer(Buffer.from(privateKey, 'hex'))
+  const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'), {
+    network: bitcoin.networks.bitcoin
+  })
   const address = bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey }).address!
   
   return {
@@ -83,7 +90,7 @@ export function decryptSeed(encrypted: string, password: string): string {
   }
 }
 
-export function signEthereumTx(
+export async function signEthereumTx(
   privateKey: string,
   to: string,
   value: string,
@@ -91,7 +98,7 @@ export function signEthereumTx(
   gasLimit: string,
   nonce: number,
   chainId: number
-): string {
+): Promise<string> {
   const wallet = new ethers.Wallet('0x' + privateKey)
   const tx = {
     to,
@@ -102,7 +109,7 @@ export function signEthereumTx(
     chainId
   }
   
-  return wallet.signTransactionSync(tx)
+  return wallet.signTransaction(tx)
 }
 
 export function signBitcoinTx(
@@ -112,7 +119,7 @@ export function signBitcoinTx(
   network: 'mainnet' | 'testnet' = 'mainnet'
 ): string {
   const net = network === 'mainnet' ? bitcoin.networks.bitcoin : bitcoin.networks.testnet
-  const keyPair = bitcoin.ECPair.fromPrivateKeyBuffer(Buffer.from(privateKey, 'hex'), net)
+  const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'), { network: net })
   
   const psbt = new bitcoin.Psbt({ network: net })
   
