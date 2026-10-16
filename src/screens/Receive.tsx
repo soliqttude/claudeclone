@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import QRCode from 'qrcode.react'
+import { QRCodeSVG } from 'qrcode.react'
 import { Copy, Check } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -73,14 +73,13 @@ export function ReceiveScreen() {
           'animate-fade-in'
         )}>
           <div className="p-3 bg-exodus-bg rounded-lg">
-            <QRCode
+            <QRCodeSVG
               value={address}
               size={180}
               level="H"
-              includeMargin={false}
+              marginSize={0}
               bgColor="#0F0F0F"
               fgColor="#FFFFFF"
-              quietZone={0}
             />
           </div>
         </div>
